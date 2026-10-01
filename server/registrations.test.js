@@ -205,6 +205,36 @@ test('HTTP API validates origin, content, size and method and returns saved stat
   assert.equal((await post()).status, 429);
 });
 
+test('admin registration list returns saved people without contact details', async t => {
+  const server = createServer(createRegistrationHandler({ env: {}, dataFile: dataFile(t) }));
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const headers = { Origin: 'http://localhost:5173', 'Content-Type': 'application/json', 'X-Requested-With': 'CampusPlus' };
+  const first = payload();
+  const second = payload();
+  second.event = { ...second.event, id: 'event-2', name: 'Career Talk' };
+  second.registration = { ...second.registration, name: 'Another Attendee', email: 'another@example.com', phone: '9876543211' };
+
+  assert.equal((await fetch(`${baseUrl}/api/registrations`, { method: 'POST', headers, body: JSON.stringify(first) })).status, 201);
+  assert.equal((await fetch(`${baseUrl}/api/registrations`, { method: 'POST', headers, body: JSON.stringify(second) })).status, 201);
+
+  assert.equal((await fetch(`${baseUrl}/api/admin/registrations`)).status, 403);
+  const response = await fetch(`${baseUrl}/api/admin/registrations`, { headers: { Origin: 'http://localhost:5173', 'X-Requested-With': 'CampusPlus' } });
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.registrations.length, 2);
+  assert.deepEqual(result.registrations.map(registration => registration.event.name).sort(), ['Campus Coding', 'Career Talk']);
+  assert.equal(result.registrations.find(registration => registration.name === 'Another Attendee').event.id, 'event-2');
+
+  const serialized = JSON.stringify(result);
+  for (const value of ['test@example.com', 'another@example.com', '+919876543210', '+919876543211', 'fingerprint']) {
+    assert.ok(!serialized.includes(value));
+  }
+  assert.equal((await fetch(`${baseUrl}/api/admin/registrations`, { method: 'POST', headers })).status, 405);
+});
+
 test('after SMS setup, resubmitting an existing registration sends only its skipped SMS once', async t => {
   const initial = setup(t, { env: { RESEND_API_KEY: credentials.RESEND_API_KEY, EMAIL_FROM: credentials.EMAIL_FROM } });
   const body = payload();

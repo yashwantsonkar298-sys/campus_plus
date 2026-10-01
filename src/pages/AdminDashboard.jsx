@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEventContext } from '../context/EventContext';
 import { FiPlus, FiEdit2, FiTrash2, FiUsers, FiSearch, FiCalendar, FiTag, FiStar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import AdminTabs from '../components/AdminTabs';
 
 const AdminDashboard = () => {
-  const { events, deleteEvent, getEventRegistrations } = useEventContext();
+  const { events, deleteEvent } = useEventContext();
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -38,6 +39,8 @@ const AdminDashboard = () => {
           <FiPlus /> Add New Event
         </Link>
       </div>
+
+      <AdminTabs />
 
       {/* Stats */}
       <div className="admin-stats">

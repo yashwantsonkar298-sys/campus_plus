@@ -16,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AddEventPage from './pages/AddEventPage';
 import EditEventPage from './pages/EditEventPage';
 import ViewRegistrationsPage from './pages/ViewRegistrationsPage';
+import PeopleRegisteredPage from './pages/PeopleRegisteredPage';
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
           <Route path="/admin/add" element={<AddEventPage />} />
           <Route path="/admin/edit/:id" element={<EditEventPage />} />
           <Route path="/admin/registrations/:id" element={<ViewRegistrationsPage />} />
+          <Route path="/admin/people" element={<PeopleRegisteredPage />} />
         </Routes>
       </main>
       <Footer />

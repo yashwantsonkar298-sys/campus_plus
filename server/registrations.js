@@ -39,6 +39,25 @@ function publicResult(record, replayed = false) {
   };
 }
 
+function publicPeopleList(records) {
+  return records
+    .map(record => ({
+      id: record.registration.id,
+      name: record.registration.name,
+      college: record.registration.college,
+      year: record.registration.year,
+      registeredAt: record.registration.registeredAt,
+      event: {
+        id: record.event.id,
+        name: record.event.name,
+        date: record.event.date,
+        time: record.event.time,
+        venue: record.event.venue,
+      },
+    }))
+    .sort((first, second) => Date.parse(second.registeredAt) - Date.parse(first.registeredAt));
+}
+
 export function createRegistrationService({ env = process.env, dataFile = resolve('server/data/registrations.json'), fetchImpl = fetch } = {}) {
   let records = [];
   try {
@@ -81,7 +100,7 @@ export function createRegistrationService({ env = process.env, dataFile = resolv
     try { await task; } finally { pending.delete(record.registration.id); }
   };
 
-  return async function register(body) {
+  const register = async function register(body) {
     const input = validatePayload(body);
     const fingerprint = JSON.stringify({ event: input.event, registration: input.registration });
     const existing = records.find(record => record.registration.id === input.requestId ||
@@ -123,6 +142,9 @@ export function createRegistrationService({ env = process.env, dataFile = resolv
     await sendNotifications(record, ['email', 'sms'].filter(channel => config[channel]));
     return publicResult(record);
   };
+
+  register.list = () => publicPeopleList(records);
+  return register;
 }
 
 export function createRegistrationHandler(options = {}) {
@@ -133,12 +155,24 @@ export function createRegistrationHandler(options = {}) {
   }
   const limits = new Map();
   return async (req, res, next = () => { res.writeHead(404); res.end(); }) => {
-    if (req.url?.split('?')[0] !== '/api/registrations') return next();
+    const pathname = req.url?.split('?')[0];
+    if (pathname !== '/api/registrations' && pathname !== '/api/admin/registrations') return next();
     const reply = (status, body) => {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(body));
     };
     try {
+      if (pathname === '/api/admin/registrations') {
+        if (req.method !== 'GET') throw fail(405, 'Use GET to list registrations.');
+        const origin = req.headers.origin;
+        const allowed = env.APP_ORIGIN ? origin === env.APP_ORIGIN : /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || '');
+        if ((origin && !allowed) || req.headers['x-requested-with'] !== 'CampusPlus') {
+          throw fail(403, 'Registration lists must be opened from this website.');
+        }
+        reply(200, { registrations: register.list() });
+        return;
+      }
+
       if (req.method !== 'POST') throw fail(405, 'Use POST to register.');
       const origin = req.headers.origin;
       const allowed = env.APP_ORIGIN ? origin === env.APP_ORIGIN : /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || '');
