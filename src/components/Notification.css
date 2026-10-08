@@ -1,0 +1,31 @@
+.notification {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.notification.success {
+  background: #10b981;
+  color: white;
+}
+
+.notification.info {
+  background: var(--accent-color);
+  color: white;
+}
+
+.notification-icon {
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+}
